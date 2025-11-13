@@ -22,7 +22,7 @@ class OrderController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Order::with(['customer', 'items.product', 'promotions.promotion']);
+        $query = Order::with(['customer', 'orderItems.product', 'promotions.promotion']);
 
         // Filter by status
         if ($request->has('status')) {
@@ -139,7 +139,7 @@ class OrderController extends Controller
             ]);
 
             // Load relationships for response
-            $order->load(['customer', 'items.product', 'promotions.promotion']);
+            $order->load(['customer', 'orderItems.product', 'promotions.promotion']);
 
             return response()->json([
                 'success' => true,
@@ -154,7 +154,7 @@ class OrderController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $order = Order::with(['customer', 'items.product', 'promotions.promotion'])->findOrFail($id);
+        $order = Order::with(['customer', 'orderItems.product', 'promotions.promotion'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -182,7 +182,7 @@ class OrderController extends Controller
         $order->update($validated);
 
         // Load relationships for response
-        $order->load(['customer', 'items.product', 'promotions.promotion']);
+        $order->load(['customer', 'orderItems.product', 'promotions.promotion']);
 
         return response()->json([
             'success' => true,
@@ -342,7 +342,7 @@ class OrderController extends Controller
      */
     private function deductIngredientsFromStock(Order $order): void
     {
-        foreach ($order->items as $item) {
+        foreach ($order->orderItems as $item) {
             $product = Product::find($item->product_id);
             if ($product) {
                 $recipes = ProductRecipe::where('product_id', $product->id)->get();

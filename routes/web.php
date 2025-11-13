@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CustomerController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -62,13 +63,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('categories.edit');
 
     // Customer routes
-    Route::get('/customers', function () {
-        return Inertia::render('customers/index');
-    })->name('customers.index');
-
-    Route::get('/customers/create', function () {
-        return Inertia::render('customers/create');
-    })->name('customers.create');
+    Route::get('/customers', [CustomerController::class, 'indexWeb'])->name('customers.index');
+    Route::get('/customers/create', [CustomerController::class, 'createWeb'])->name('customers.create');
+    Route::post('/customers', [CustomerController::class, 'storeWeb'])->name('customers.store');
+    Route::get('/customers/{id}', [CustomerController::class, 'showWeb'])->name('customers.show');
+    Route::get('/customers/{id}/edit', [CustomerController::class, 'editWeb'])->name('customers.edit');
+    Route::put('/customers/{id}', [CustomerController::class, 'updateWeb'])->name('customers.update');
+    Route::delete('/customers/{id}', [CustomerController::class, 'destroyWeb'])->name('customers.destroy');
 
     // Inventory routes
     Route::get('/inventory', function () {

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Folder } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
+import Swal from 'sweetalert2';
 
 interface Category {
     id: number;
@@ -63,7 +64,18 @@ export default function CategoriesIndex() {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้?')) {
+        const result = await Swal.fire({
+            title: 'คุณแน่ใจหรือไม่?',
+            text: 'คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ลบเลย!',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                 const response = await fetch(`/api/categories/${id}`, {
@@ -82,13 +94,28 @@ export default function CategoriesIndex() {
 
                 const data = await response.json();
                 if (data.success) {
+                    await Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: 'ลบหมวดหมู่เรียบร้อยแล้ว',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     fetchCategories(); // Refresh the list
                 } else {
-                    alert(data.message || 'ไม่สามารถลบหมวดหมู่ได้');
+                    await Swal.fire({
+                        title: 'ผิดพลาด!',
+                        text: data.message || 'ไม่สามารถลบหมวดหมู่ได้',
+                        icon: 'error'
+                    });
                 }
             } catch (error) {
                 console.error('Error deleting category:', error);
-                alert('เกิดข้อผิดพลาดในการลบหมวดหมู่');
+                await Swal.fire({
+                    title: 'ผิดพลาด!',
+                    text: 'เกิดข้อผิดพลาดในการลบหมวดหมู่',
+                    icon: 'error'
+                });
             }
         }
     };

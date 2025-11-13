@@ -45,7 +45,7 @@ class DashboardController extends Controller
         $lowStockIngredients = Ingredient::whereRaw('current_stock <= min_stock')->count();
 
         // Recent orders
-        $recentOrders = Order::with(['customer', 'items.product'])
+        $recentOrders = Order::with(['customer', 'orderItems.product'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();

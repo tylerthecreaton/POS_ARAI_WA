@@ -11,13 +11,18 @@ class Customer extends Model
 
     protected $fillable = [
         'name',
-        'phone',
         'email',
+        'phone',
+        'address',
+        'birth_date',
+        'membership_tier',
         'points',
+        'notes',
     ];
 
     protected $casts = [
         'points' => 'integer',
+        'birth_date' => 'date',
     ];
 
     /**

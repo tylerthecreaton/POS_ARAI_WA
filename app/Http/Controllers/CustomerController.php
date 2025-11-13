@@ -7,6 +7,8 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CustomerController extends Controller
 {
@@ -238,7 +240,7 @@ class CustomerController extends Controller
     {
         $customer = Customer::findOrFail($id);
 
-        $query = $customer->orders()->with(['items.product', 'promotions.promotion']);
+        $query = $customer->orders()->with(['orderItems.product', 'promotions.promotion']);
 
         // Filter by date range
         if ($request->has('start_date')) {
@@ -278,5 +280,155 @@ class CustomerController extends Controller
             'data' => $customer,
             'message' => 'Membership tier upgraded successfully'
         ]);
+    }
+
+    /**
+     * Display a listing of the resource for web.
+     */
+    public function indexWeb(Request $request): Response
+    {
+        $query = Customer::query();
+
+        // Search by name or phone
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('phone', 'like', '%' . $search . '%')
+                  ->orWhere('email', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Filter by membership tier
+        if ($request->has('membership_tier') && $request->membership_tier) {
+            $query->where('membership_tier', $request->membership_tier);
+        }
+
+        $customers = $query->withCount('orders')
+            ->withSum('orders', 'total_amount')
+            ->orderBy('name')
+            ->paginate(20);
+
+        return Inertia::render('customers/index', [
+            'customers' => $customers,
+            'filters' => [
+                'search' => $request->search,
+                'membership_tier' => $request->membership_tier,
+            ],
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new resource for web.
+     */
+    public function createWeb(): Response
+    {
+        return Inertia::render('customers/create');
+    }
+
+    /**
+     * Store a newly created resource in storage for web.
+     */
+    public function storeWeb(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255|unique:customers,email',
+            'phone' => 'required|string|max:20|unique:customers,phone',
+            'address' => 'nullable|string',
+            'birth_date' => 'nullable|date',
+            'membership_tier' => ['nullable', Rule::in(['bronze', 'silver', 'gold', 'platinum'])],
+            'points' => 'nullable|integer|min:0',
+            'notes' => 'nullable|string',
+        ]);
+
+        // Set default membership tier if not provided
+        if (!isset($validated['membership_tier'])) {
+            $validated['membership_tier'] = 'bronze';
+        }
+
+        // Set default points if not provided
+        if (!isset($validated['points'])) {
+            $validated['points'] = 0;
+        }
+
+        $customer = Customer::create($validated);
+
+        return to_route('customers.index');
+    }
+
+    /**
+     * Display the specified resource for web.
+     */
+    public function showWeb(string $id): Response
+    {
+        $customer = Customer::findOrFail($id);
+
+        $stats = $this->statistics($id)->getData(true)['data'];
+
+        $recentOrders = $customer->orders()
+            ->withCount('orderItems')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return Inertia::render('customers/show', [
+            'customer' => $customer,
+            'stats' => $stats,
+            'recent_orders' => $recentOrders,
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource for web.
+     */
+    public function editWeb(string $id): Response
+    {
+        $customer = Customer::findOrFail($id);
+
+        return Inertia::render('customers/edit', [
+            'customer' => $customer,
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage for web.
+     */
+    public function updateWeb(Request $request, string $id)
+    {
+        $customer = Customer::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('customers', 'email')->ignore($customer->id)],
+            'phone' => ['sometimes', 'string', 'max:20', Rule::unique('customers', 'phone')->ignore($customer->id)],
+            'address' => 'sometimes|nullable|string',
+            'birth_date' => 'sometimes|nullable|date',
+            'membership_tier' => ['sometimes', Rule::in(['bronze', 'silver', 'gold', 'platinum'])],
+            'points' => 'sometimes|integer|min:0',
+            'notes' => 'sometimes|nullable|string',
+        ]);
+
+        $customer->update($validated);
+
+        return to_route('customers.index');
+    }
+
+    /**
+     * Remove the specified resource from storage for web.
+     */
+    public function destroyWeb(string $id)
+    {
+        $customer = Customer::findOrFail($id);
+
+        // Check if customer has orders
+        if ($customer->orders()->count() > 0) {
+            return back()->with('error', 'Cannot delete customer with associated orders');
+        }
+
+        $customer->delete();
+
+        return redirect()->route('customers.index')
+            ->with('success', 'Customer deleted successfully');
     }
 }

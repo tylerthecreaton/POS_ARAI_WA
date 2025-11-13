@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useState } from 'react';
+import Swal from 'sweetalert2';
 
 interface FormData {
     name: string;
@@ -69,10 +70,22 @@ export default function CategoriesCreate() {
 
             const data = await response.json();
             if (data.success) {
+                await Swal.fire({
+                    title: 'สำเร็จ!',
+                    text: 'เพิ่มหมวดหมู่ใหม่เรียบร้อยแล้ว',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
                 router.visit('/categories');
             }
         } catch (error) {
             console.error('Error creating category:', error);
+            await Swal.fire({
+                title: 'ผิดพลาด!',
+                text: 'ไม่สามารถเพิ่มหมวดหมู่ใหม่ได้ กรุณาลองใหม่อีกครั้ง',
+                icon: 'error'
+            });
         } finally {
             setSubmitting(false);
         }

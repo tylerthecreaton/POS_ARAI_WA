@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 
 interface Category {
     id: number;
@@ -117,10 +118,22 @@ export default function CategoriesEdit({ id }: Props) {
 
             const data = await response.json();
             if (data.success) {
+                await Swal.fire({
+                    title: 'สำเร็จ!',
+                    text: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
                 router.visit('/categories');
             }
         } catch (error) {
             console.error('Error updating category:', error);
+            await Swal.fire({
+                title: 'ผิดพลาด!',
+                text: 'ไม่สามารถแก้ไขหมวดหมู่ได้ กรุณาลองใหม่อีกครั้ง',
+                icon: 'error'
+            });
         } finally {
             setSubmitting(false);
         }

@@ -48,8 +48,9 @@ Route::middleware(['auth:web'])->group(function () {
     Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
     Route::get('/orders/statistics', [OrderController::class, 'statistics']);
 
-    // Customers
-    Route::apiResource('customers', CustomerController::class);
+    // Customers - specific API endpoints only
+    Route::get('/customers', [CustomerController::class, 'index']);
+    Route::get('/customers/{id}', [CustomerController::class, 'show']);
     Route::post('/customers/{id}/points/add', [CustomerController::class, 'addPoints']);
     Route::post('/customers/{id}/points/redeem', [CustomerController::class, 'redeemPoints']);
     Route::get('/customers/{id}/statistics', [CustomerController::class, 'statistics']);
