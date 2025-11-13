@@ -61,6 +61,8 @@ Route::middleware(['auth:web'])->group(function () {
     Route::apiResource('promotions', PromotionController::class);
     Route::post('/promotions/apply', [PromotionController::class, 'apply']);
     Route::post('/promotions/remove', [PromotionController::class, 'remove']);
+    Route::get('/promotions/{id}/analytics', [PromotionController::class, 'analytics']);
+    Route::post('/promotions/preview', [PromotionController::class, 'preview']);
 
     // Ingredients
     Route::apiResource('ingredients', IngredientController::class);

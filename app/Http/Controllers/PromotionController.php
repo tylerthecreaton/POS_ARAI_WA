@@ -285,4 +285,290 @@ class PromotionController extends Controller
             'message' => 'Promotion removed successfully'
         ]);
     }
+
+    /**
+     * Display a listing of the resource for web.
+     */
+    public function indexWeb(Request $request)
+    {
+        return inertia('promotions/index');
+    }
+
+    /**
+     * Show the form for creating a new resource for web.
+     */
+    public function createWeb()
+    {
+        $products = \App\Models\Product::where('is_available', true)->get(['id', 'name', 'price']);
+        $categories = \App\Models\Category::all(['id', 'name']);
+
+        return inertia('promotions/create', [
+            'products' => $products,
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Display the specified resource for web.
+     */
+    public function showWeb(string $id)
+    {
+        $promotion = Promotion::with(['applicableProducts', 'applicableCategories'])->findOrFail($id);
+
+        return inertia('promotions/show', [
+            'promotion' => $promotion,
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource for web.
+     */
+    public function editWeb(string $id)
+    {
+        $promotion = Promotion::with(['applicableProducts', 'applicableCategories'])->findOrFail($id);
+        $products = \App\Models\Product::where('is_available', true)->get(['id', 'name', 'price']);
+        $categories = \App\Models\Category::all(['id', 'name']);
+
+        return inertia('promotions/edit', [
+            'promotion' => $promotion,
+            'products' => $products,
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage for web.
+     */
+    public function storeWeb(Request $request)
+    {
+        $response = $this->store($request);
+
+        if ($response->getStatusCode() === 201) {
+            return redirect()->route('promotions.index')
+                ->with('success', 'สร้างโปรโมชั่นเรียบร้อยแล้ว');
+        }
+
+        return redirect()->back()
+            ->with('error', 'ไม่สามารถสร้างโปรโมชั่นได้')
+            ->withErrors($response->getData(true));
+    }
+
+    /**
+     * Update the specified resource in storage for web.
+     */
+    public function updateWeb(Request $request, string $id)
+    {
+        $response = $this->update($request, $id);
+
+        if ($response->getStatusCode() === 200) {
+            return redirect()->route('promotions.index')
+                ->with('success', 'อัปเดตโปรโมชั่นเรียบร้อยแล้ว');
+        }
+
+        return redirect()->back()
+            ->with('error', 'ไม่สามารถอัปเดตโปรโมชั่นได้')
+            ->withErrors($response->getData(true));
+    }
+
+    /**
+     * Remove the specified resource from storage for web.
+     */
+    public function destroyWeb(string $id)
+    {
+        $response = $this->destroy($id);
+
+        if ($response->getStatusCode() === 200) {
+            return redirect()->route('promotions.index')
+                ->with('success', 'ลบโปรโมชั่นเรียบร้อยแล้ว');
+        }
+
+        return redirect()->back()
+            ->with('error', 'ไม่สามารถลบโปรโมชั่นได้');
+    }
+
+    /**
+     * Get promotion analytics.
+     */
+    public function analytics(string $id): JsonResponse
+    {
+        $promotion = Promotion::findOrFail($id);
+
+        // Get order promotions for this promotion
+        $orderPromotions = OrderPromotion::where('promotion_id', $id)
+            ->with('order')
+            ->get();
+
+        $totalDiscount = $orderPromotions->sum('discount_amount');
+        $ordersCount = $orderPromotions->count();
+
+        // Calculate additional metrics
+        $totalOrders = \App\Models\Order::count();
+        $avgOrderValue = $orderPromotions->avg(function ($item) {
+            return $item->order ? $item->order->total_amount : 0;
+        });
+
+        // Find peak usage date
+        $peakUsageDate = $orderPromotions->groupBy(function ($item) {
+            return \Carbon\Carbon::parse($item->created_at)->format('Y-m-d');
+        })->map->max('count', function ($group) {
+            return $group->count();
+        });
+
+        // Calculate daily average usage
+        $startDate = $promotion->created_at;
+        $daysSinceStart = $startDate->diffInDays(now());
+        $dailyAvgUsage = $daysSinceStart > 0 ? round($ordersCount / $daysSinceStart, 2) : 0;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_discount' => $totalDiscount,
+                'orders_count' => $ordersCount,
+                'total_orders' => $totalOrders,
+                'total_savings' => $totalDiscount,
+                'avg_order_value' => $avgOrderValue,
+                'peak_usage_date' => $peakUsageDate ? \Carbon\Carbon::parse($peakUsageDate)->format('d/m/Y') : null,
+                'daily_avg_usage' => $dailyAvgUsage,
+            ]
+        ]);
+    }
+
+    /**
+     * Preview promotion effects.
+     */
+    public function preview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'promotion_type' => ['required', Rule::in(['percentage', 'fixed_amount', 'buy_one_get_one', 'free_item', 'points_multiplier'])],
+            'discount_value' => 'required|numeric|min:0',
+            'min_order_amount' => 'nullable|numeric|min:0',
+            'max_discount_amount' => 'nullable|numeric|min:0',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'is_active' => 'boolean',
+            'usage_limit' => 'nullable|integer|min:1',
+            'required_points' => 'nullable|integer|min:0',
+            'points_multiplier' => 'nullable|numeric|min:0',
+            'free_product_id' => 'nullable|exists:products,id',
+            'buy_quantity' => 'nullable|integer|min:1',
+            'get_quantity' => 'nullable|integer|min:1',
+            'applicable_product_ids' => 'nullable|array',
+            'applicable_product_ids.*' => 'exists:products,id',
+            'applicable_category_ids' => 'nullable|array',
+            'applicable_category_ids.*' => 'exists:categories,id',
+        ]);
+
+        // Calculate preview effects
+        $preview = [
+            'promotion_type' => $validated['promotion_type'],
+            'discount_value' => $validated['discount_value'],
+            'min_order_amount' => $validated['min_order_amount'],
+            'max_discount_amount' => $validated['max_discount_amount'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'is_active' => $validated['is_active'],
+            'usage_limit' => $validated['usage_limit'],
+            'required_points' => $validated['required_points'],
+            'points_multiplier' => $validated['points_multiplier'],
+            'free_product_id' => $validated['free_product_id'],
+            'buy_quantity' => $validated['buy_quantity'],
+            'get_quantity' => $validated['get_quantity'],
+        ];
+
+        // Calculate sample scenarios
+        $sampleScenarios = [];
+
+        // Sample order amounts for calculation
+        $sampleAmounts = [100, 500, 1000, 2000];
+
+        foreach ($sampleAmounts as $amount) {
+            $discount = 0;
+            $finalAmount = $amount;
+            $applicable = true;
+
+            switch ($validated['promotion_type']) {
+                case 'percentage':
+                    $discount = $amount * ($validated['discount_value'] / 100);
+                    $finalAmount = $amount - $discount;
+                    if ($validated['min_order_amount'] && $amount < $validated['min_order_amount']) {
+                        $applicable = false;
+                    }
+                    if ($validated['max_discount_amount'] && $discount > $validated['max_discount_amount']) {
+                        $discount = $validated['max_discount_amount'];
+                        $finalAmount = $amount - $discount;
+                    }
+                    break;
+
+                case 'fixed_amount':
+                    $discount = $validated['discount_value'];
+                    $finalAmount = $amount - $discount;
+                    if ($validated['min_order_amount'] && $amount < $validated['min_order_amount']) {
+                        $applicable = false;
+                    }
+                    break;
+
+                case 'buy_one_get_one':
+                    // For BOGO, calculate based on buy_quantity and get_quantity
+                    $buyQty = $validated['buy_quantity'] ?? 1;
+                    $getQty = $validated['get_quantity'] ?? 1;
+                    $discount = ($amount / $buyQty) * $getQty;
+                    $finalAmount = $amount;
+                    if ($validated['min_order_amount'] && $amount < $validated['min_order_amount']) {
+                        $applicable = false;
+                    }
+                    break;
+
+                case 'free_item':
+                    // Free item doesn't affect order amount directly
+                    $discount = 0;
+                    $finalAmount = $amount;
+                    if ($validated['min_order_amount'] && $amount < $validated['min_order_amount']) {
+                        $applicable = false;
+                    }
+                    break;
+
+                case 'points_multiplier':
+                    // Points multiplier doesn't affect order amount
+                    $discount = 0;
+                    $finalAmount = $amount;
+                    if ($validated['min_order_amount'] && $amount < $validated['min_order_amount']) {
+                        $applicable = false;
+                    }
+                    break;
+            }
+
+            $sampleScenarios[] = [
+                'order_amount' => $amount,
+                'discount' => $discount,
+                'final_amount' => $finalAmount,
+                'applicable' => $applicable,
+                'savings_percentage' => $amount > 0 ? round(($discount / $amount) * 100, 2) : 0,
+            ];
+        }
+
+        // Get applicable products and categories
+        $applicableProducts = [];
+        $applicableCategories = [];
+
+        if (isset($validated['applicable_product_ids'])) {
+            $applicableProducts = \App\Models\Product::whereIn('id', $validated['applicable_product_ids'])
+                ->get(['id', 'name', 'price']);
+        }
+
+        if (isset($validated['applicable_category_ids'])) {
+            $applicableCategories = \App\Models\Category::whereIn('id', $validated['applicable_category_ids'])
+                ->get(['id', 'name']);
+        }
+
+        $preview['sample_scenarios'] = $sampleScenarios;
+        $preview['applicable_products'] = $applicableProducts;
+        $preview['applicable_categories'] = $applicableCategories;
+
+        return response()->json([
+            'success' => true,
+            'data' => $preview
+        ]);
+    }
 }

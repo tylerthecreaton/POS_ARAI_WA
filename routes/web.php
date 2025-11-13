@@ -7,6 +7,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\StockTransactionController;
+use App\Http\Controllers\PromotionController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -92,13 +93,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/inventory/transactions', [StockTransactionController::class, 'storeWeb'])->name('inventory.transactions.store');
 
     // Promotion routes
-    Route::get('/promotions', function () {
-        return Inertia::render('promotions/index');
-    })->name('promotions.index');
-
-    Route::get('/promotions/create', function () {
-        return Inertia::render('promotions/create');
-    })->name('promotions.create');
+    Route::get('/promotions', [PromotionController::class, 'indexWeb'])->name('promotions.index');
+    Route::get('/promotions/create', [PromotionController::class, 'createWeb'])->name('promotions.create');
+    Route::post('/promotions', [PromotionController::class, 'storeWeb'])->name('promotions.store');
+    Route::get('/promotions/{id}', [PromotionController::class, 'showWeb'])->name('promotions.show');
+    Route::get('/promotions/{id}/edit', [PromotionController::class, 'editWeb'])->name('promotions.edit');
+    Route::put('/promotions/{id}', [PromotionController::class, 'updateWeb'])->name('promotions.update');
+    Route::delete('/promotions/{id}', [PromotionController::class, 'destroyWeb'])->name('promotions.destroy');
 
     // Report routes
     Route::get('/reports/sales', function () {
