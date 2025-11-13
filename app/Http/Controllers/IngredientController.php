@@ -7,6 +7,7 @@ use App\Models\StockTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class IngredientController extends Controller
 {
@@ -144,5 +145,99 @@ class IngredientController extends Controller
             'success' => true,
             'message' => 'Ingredient deleted successfully'
         ]);
+    }
+
+    /**
+     * Display a listing of the resource for web view.
+     */
+    public function indexWeb()
+    {
+        return Inertia::render('ingredients/index');
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function createWeb()
+    {
+        return Inertia::render('ingredients/create');
+    }
+
+    /**
+     * Store a newly created resource in storage for web requests.
+     */
+    public function storeWeb(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'unit' => 'required|string|max:50',
+            'current_stock' => 'required|numeric|min:0',
+            'min_stock' => 'required|numeric|min:0',
+            'cost_per_unit' => 'required|numeric|min:0',
+        ]);
+
+        $ingredient = Ingredient::create($validated);
+
+        return redirect()->route('ingredients.index')
+            ->with('success', 'วัตถุดิบถูกสร้างเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Display the specified resource for web view.
+     */
+    public function showWeb(string $id)
+    {
+        $ingredient = Ingredient::findOrFail($id);
+
+        return Inertia::render('ingredients/show', [
+            'id' => $id,
+            'ingredient' => $ingredient
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function editWeb(string $id)
+    {
+        $ingredient = Ingredient::findOrFail($id);
+
+        return Inertia::render('ingredients/edit', [
+            'id' => $id,
+            'ingredient' => $ingredient
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage for web requests.
+     */
+    public function updateWeb(Request $request, string $id)
+    {
+        $ingredient = Ingredient::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'unit' => 'required|string|max:50',
+            'current_stock' => 'required|numeric|min:0',
+            'min_stock' => 'required|numeric|min:0',
+            'cost_per_unit' => 'required|numeric|min:0',
+        ]);
+
+        $ingredient->update($validated);
+
+        return redirect()->route('ingredients.index')
+            ->with('success', 'วัตถุดิบถูกอัพเดทเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Remove the specified resource from storage for web requests.
+     */
+    public function destroyWeb(string $id)
+    {
+        $ingredient = Ingredient::findOrFail($id);
+        $ingredient->delete();
+
+        return redirect()->route('ingredients.index')
+            ->with('success', 'วัตถุดิบถูกลบเรียบร้อยแล้ว');
     }
 }

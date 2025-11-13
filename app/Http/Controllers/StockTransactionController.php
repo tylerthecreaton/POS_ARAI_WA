@@ -7,6 +7,7 @@ use App\Models\Ingredient;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class StockTransactionController extends Controller
 {
@@ -182,5 +183,60 @@ class StockTransactionController extends Controller
             'success' => true,
             'data' => $summary
         ]);
+    }
+
+    /**
+     * Display a listing of the resource for web view.
+     */
+    public function indexWeb(Request $request)
+    {
+        return Inertia::render('inventory/transactions/index');
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function createWeb()
+    {
+        return Inertia::render('inventory/transactions/create');
+    }
+
+    /**
+     * Store a newly created resource in storage for web requests.
+     */
+    public function storeWeb(Request $request)
+    {
+        $validated = $request->validate([
+            'ingredient_id' => 'required|exists:ingredients,id',
+            'transaction_type' => ['required', Rule::in(['in', 'out', 'adjustment'])],
+            'quantity' => 'required|numeric|min:0.01',
+            'unit_cost' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string',
+        ]);
+
+        $ingredient = Ingredient::findOrFail($validated['ingredient_id']);
+
+        // Create stock transaction
+        $transaction = StockTransaction::create($validated);
+
+        // Update ingredient stock based on transaction type
+        if ($validated['transaction_type'] === 'in') {
+            $ingredient->current_stock += $validated['quantity'];
+        } elseif ($validated['transaction_type'] === 'out') {
+            if ($ingredient->current_stock < $validated['quantity']) {
+                return redirect()->back()
+                    ->withErrors(['quantity' => 'สต็อกไม่เพียงพอ'])
+                    ->withInput();
+            }
+            $ingredient->current_stock -= $validated['quantity'];
+        } elseif ($validated['transaction_type'] === 'adjustment') {
+            // For adjustment, set the stock directly to the quantity
+            $ingredient->current_stock = $validated['quantity'];
+        }
+
+        $ingredient->save();
+
+        return redirect()->route('inventory.transactions')
+            ->with('success', 'บันทึกการเคลื่อนไหวสต็อกเรียบร้อยแล้ว');
     }
 }

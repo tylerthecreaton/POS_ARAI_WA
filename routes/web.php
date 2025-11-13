@@ -5,6 +5,8 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\StockTransactionController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -76,13 +78,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('inventory/index');
     })->name('inventory.index');
 
-    Route::get('/inventory/transactions', function () {
-        return Inertia::render('inventory/transactions');
-    })->name('inventory.transactions');
+    // Ingredient CRUD routes
+    Route::get('/ingredients', [IngredientController::class, 'indexWeb'])->name('ingredients.index');
+    Route::get('/ingredients/create', [IngredientController::class, 'createWeb'])->name('ingredients.create');
+    Route::post('/ingredients', [IngredientController::class, 'storeWeb'])->name('ingredients.store');
+    Route::get('/ingredients/{id}', [IngredientController::class, 'showWeb'])->name('ingredients.show');
+    Route::get('/ingredients/{id}/edit', [IngredientController::class, 'editWeb'])->name('ingredients.edit');
+    Route::put('/ingredients/{id}', [IngredientController::class, 'updateWeb'])->name('ingredients.update');
+    Route::delete('/ingredients/{id}', [IngredientController::class, 'destroyWeb'])->name('ingredients.destroy');
 
-    Route::get('/inventory/transactions/create', function () {
-        return Inertia::render('inventory/transactions/create');
-    })->name('inventory.transactions.create');
+    Route::get('/inventory/transactions', [StockTransactionController::class, 'indexWeb'])->name('inventory.transactions');
+    Route::get('/inventory/transactions/create', [StockTransactionController::class, 'createWeb'])->name('inventory.transactions.create');
+    Route::post('/inventory/transactions', [StockTransactionController::class, 'storeWeb'])->name('inventory.transactions.store');
 
     // Promotion routes
     Route::get('/promotions', function () {

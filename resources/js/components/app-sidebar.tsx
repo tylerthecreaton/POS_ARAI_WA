@@ -74,6 +74,11 @@ const inventoryNavItems: NavItem[] = [
         icon: Truck,
     },
     {
+        title: 'จัดการวัตถุดิบ',
+        href: '/ingredients',
+        icon: Package,
+    },
+    {
         title: 'บันทึกสต็อก',
         href: '/inventory/transactions',
         icon: ChefHat,
