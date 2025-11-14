@@ -70,8 +70,8 @@ Route::middleware(['auth:web'])->group(function () {
     Route::put('/ingredients/{id}/stock', [IngredientController::class, 'updateStock']);
 
     // Stock Transactions
-    Route::apiResource('stock-transactions', StockTransactionController::class);
     Route::get('/stock-transactions/summary', [StockTransactionController::class, 'summary']);
+    Route::apiResource('stock-transactions', StockTransactionController::class);
 
     // Dashboard
     Route::get('/dashboard/overview', [DashboardController::class, 'overview']);

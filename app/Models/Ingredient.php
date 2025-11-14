@@ -24,6 +24,14 @@ class Ingredient extends Model
     ];
 
     /**
+     * Determine if the ingredient is low in stock.
+     */
+    public function getIsLowStockAttribute()
+    {
+        return $this->current_stock <= $this->min_stock && $this->current_stock > 0;
+    }
+
+    /**
      * Get the product recipes for the ingredient.
      */
     public function productRecipes()

@@ -61,7 +61,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const transactionTypes = [
-    { value: '', label: 'ทั้งหมด' },
+    { value: 'all', label: 'ทั้งหมด' },
     { value: 'in', label: 'นำเข้า' },
     { value: 'out', label: 'นำออก' },
     { value: 'adjustment', label: 'ปรับปรุง' },
@@ -74,8 +74,8 @@ export default function StockTransactionsIndex() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
-        ingredient_id: '',
-        transaction_type: '',
+        ingredient_id: 'all',
+        transaction_type: 'all',
         start_date: '',
         end_date: '',
     });
@@ -86,9 +86,10 @@ export default function StockTransactionsIndex() {
 
         // Add filters to URL
         Object.entries(filters).forEach(([key, value]) => {
-            if (value) {
-                url += `&${key}=${value}`;
-            }
+            if (!value) return;
+            if (key === 'ingredient_id' && value === 'all') return;
+            if (key === 'transaction_type' && value === 'all') return;
+            url += `&${key}=${value}`;
         });
 
         fetch(url)
@@ -160,8 +161,8 @@ export default function StockTransactionsIndex() {
 
     const clearFilters = () => {
         setFilters({
-            ingredient_id: '',
-            transaction_type: '',
+            ingredient_id: 'all',
+            transaction_type: 'all',
             start_date: '',
             end_date: '',
         });
@@ -253,7 +254,7 @@ export default function StockTransactionsIndex() {
                                             <SelectValue placeholder="เลือกวัตถุดิบ" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">ทั้งหมด</SelectItem>
+                                            <SelectItem value="all">ทั้งหมด</SelectItem>
                                             {ingredients.map((ingredient) => (
                                                 <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
                                                     {ingredient.name}

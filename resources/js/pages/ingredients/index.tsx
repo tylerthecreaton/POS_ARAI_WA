@@ -65,45 +65,56 @@ export default function IngredientsIndex() {
 
     const fetchIngredients = (page = 1, search = '', filterType = 'all') => {
         setLoading(true);
-        let url = `/api/ingredients?page=${page}`;
-
-        if (search) {
-            url += `&search=${search}`;
-        }
+        let url = `/api/ingredients`;
 
         // Apply client-side filtering since the API doesn't support these filters yet
         fetch(url)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    let filteredData = data.data;
+                    let filteredIngredients = data.data;
 
                     // Apply filters
                     if (filterType === 'low_stock') {
-                        filteredData.data = filteredData.data.filter((item: Ingredient) =>
+                        filteredIngredients = filteredIngredients.filter((item: Ingredient) =>
                             item.is_low_stock && item.current_stock > 0
                         );
                     } else if (filterType === 'out_of_stock') {
-                        filteredData.data = filteredData.data.filter((item: Ingredient) =>
+                        filteredIngredients = filteredIngredients.filter((item: Ingredient) =>
                             item.current_stock === 0
                         );
                     }
 
                     // Apply search filter
                     if (search) {
-                        filteredData.data = filteredData.data.filter((item: Ingredient) =>
+                        filteredIngredients = filteredIngredients.filter((item: Ingredient) =>
                             item.name.toLowerCase().includes(search.toLowerCase())
                         );
                     }
 
-                    setIngredients(filteredData.data);
-                    setPagination(filteredData);
+                    // Create a mock pagination object for compatibility
+                    const mockPagination: PaginatedData = {
+                        data: filteredIngredients,
+                        current_page: 1,
+                        from: 1,
+                        last_page: 1,
+                        per_page: filteredIngredients.length,
+                        to: filteredIngredients.length,
+                        total: filteredIngredients.length,
+                        links: []
+                    };
+
+                    setIngredients(filteredIngredients);
+                    setPagination(mockPagination);
                 }
                 setLoading(false);
             })
             .catch(error => {
                 console.error('Error fetching ingredients:', error);
                 setLoading(false);
+                // Set empty array on error to prevent undefined errors
+                setIngredients([]);
+                setPagination(null);
             });
     };
 
@@ -197,7 +208,7 @@ export default function IngredientsIndex() {
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                                 <p className="text-muted-foreground mt-2">กำลังโหลด...</p>
                             </div>
-                        ) : ingredients.length === 0 ? (
+                        ) : (!ingredients || ingredients.length === 0) ? (
                             <div className="text-center py-12">
                                 <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <h3 className="text-lg font-medium">ไม่พบวัตถุดิบ</h3>

@@ -18,6 +18,11 @@ class IngredientController extends Controller
     {
         $ingredients = Ingredient::all();
 
+        // Append is_low_stock attribute to each ingredient
+        $ingredients->each(function ($ingredient) {
+            $ingredient->is_low_stock = $ingredient->is_low_stock;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $ingredients
@@ -52,6 +57,9 @@ class IngredientController extends Controller
     public function show(string $id): JsonResponse
     {
         $ingredient = Ingredient::findOrFail($id);
+
+        // Append is_low_stock attribute
+        $ingredient->is_low_stock = $ingredient->is_low_stock;
 
         return response()->json([
             'success' => true,
@@ -95,6 +103,7 @@ class IngredientController extends Controller
             'data' => [
                 'current_stock' => $ingredient->current_stock,
                 'min_stock' => $ingredient->min_stock,
+                'is_low_stock' => $ingredient->is_low_stock,
                 'stock_transactions' => $ingredient->stockTransactions()->orderBy('created_at', 'desc')->limit(10)->get()
             ]
         ]);
